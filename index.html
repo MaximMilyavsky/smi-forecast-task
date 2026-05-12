@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Qualtrics postMessage test</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; margin: 24px; color: #111827; }
+    .box { border: 1px solid #d1d5db; border-radius: 12px; padding: 16px; max-width: 720px; }
+    button { background: #111827; color: white; border: 0; border-radius: 8px; padding: 10px 14px; font-weight: 700; cursor: pointer; }
+    pre { background: #f3f4f6; padding: 12px; border-radius: 8px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Qualtrics postMessage test</h1>
+    <p>This page sends a tiny payload to the parent Qualtrics page.</p>
+    <button id="sendBtn">Send test data to Qualtrics</button>
+    <p id="status">Not sent yet.</p>
+    <pre id="payloadView"></pre>
+  </div>
+
+<script>
+(function () {
+  function makePayload(trigger) {
+    const qs = new URLSearchParams(window.location.search);
+    return {
+      type: "QUALTRICS_POSTMESSAGE_TEST",
+      payload: {
+        trigger: trigger,
+        participant_id: qs.get("pid") || qs.get("PROLIFIC_PID") || "no_pid_in_url",
+        test_value: "hello_from_github_iframe",
+        test_number: 12345,
+        sent_at: new Date().toISOString(),
+        location_href: window.location.href
+      }
+    };
+  }
+
+  function send(trigger) {
+    const msg = makePayload(trigger);
+    document.getElementById("payloadView").textContent = JSON.stringify(msg, null, 2);
+    try {
+      window.parent.postMessage(msg, "*");
+      document.getElementById("status").textContent = "Message sent: " + trigger;
+    } catch (e) {
+      document.getElementById("status").textContent = "ERROR sending message: " + e.message;
+    }
+  }
+
+  document.getElementById("sendBtn").addEventListener("click", function () {
+    send("button_click");
+  });
+
+  window.addEventListener("message", function (event) {
+    if (event.data && event.data.type === "QUALTRICS_POSTMESSAGE_TEST_ACK") {
+      document.getElementById("status").textContent = "Qualtrics acknowledged receipt at " + new Date().toISOString();
+    }
+  });
+
+  setTimeout(function () { send("auto_on_load"); }, 500);
+})();
+</script>
+</body>
+</html>
