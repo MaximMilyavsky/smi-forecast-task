@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stock Price Estimation Task</title>
+  <style>
+    :root {
+      --bg: #f7f7f9;
+      --panel: #ffffff;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --line: #d1d5db;
+      --accent: #111827;
+      --cyan: #00a8c8;
+      --magenta: #d946ef;
+      --yellow: #facc15;
+      --green: #059669;
+      --red: #dc2626;
+      --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 18px 16px 48px; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px;
+    }
+    h1 { font-size: clamp(24px, 3vw, 36px); margin: 0; letter-spacing: -0.02em; }
+    h2 { font-size: 21px; margin: 0 0 10px; }
+    h3 { font-size: 16px; margin: 0 0 8px; }
+    p { margin: 8px 0; }
+    .card {
+      background: var(--panel); border: 1px solid #e5e7eb; border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 18px; margin-bottom: 16px;
+    }
+    .grid { display: grid; grid-template-columns: minmax(250px, 0.78fr) minmax(0, 1.42fr); gap: 18px; align-items: start; }
+    .chartColumn { min-width: 0; order: 2; }
+    .sidebarColumn { min-width: 0; order: 1; }
+
+    /* Block 2 is optimized for Qualtrics iframe display on laptop screens:
+       keep the Instagram/control column on the left and the chart on the right. */
+    #screenTrial.revisionMode .grid {
+      grid-template-columns: minmax(250px, 0.78fr) minmax(0, 1.42fr);
+      gap: 14px;
+      align-items: start;
+    }
+    #screenTrial.revisionMode .sidebarColumn { order: 1; display: flex; flex-direction: column; gap: 12px; }
+    #screenTrial.revisionMode .chartColumn { order: 2; min-width: 0; }
+    #screenTrial.revisionMode #initialRecapPanel { order: 1; }
+    #screenTrial.revisionMode #advisorPanel { order: 2; margin-top: 0 !important; }
+    #screenTrial.revisionMode #finalPanel { order: 3; margin-top: 0 !important; }
+
+    @media (max-width: 700px) {
+      .grid, #screenTrial.revisionMode .grid { grid-template-columns: 1fr; }
+      #screenTrial.revisionMode .sidebarColumn, #screenTrial.revisionMode .chartColumn { order: initial; }
+    }
+    .muted { color: var(--muted); }
+    .small { font-size: 13px; }
+    .forecastInstruction { font-size: 17px; font-weight: 600; line-height: 1.45; color: var(--ink); }
+    .progress { height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; min-width: 210px; }
+    .progress > div { height: 100%; width: 0%; background: var(--accent); transition: width .25s ease; }
+    button {
+      appearance: none; border: 0; background: var(--accent); color: white; padding: 11px 16px;
+      border-radius: 12px; cursor: pointer; font-weight: 650; font-size: 14px;
+    }
+    button.secondary { background: #e5e7eb; color: #111827; }
+    button.ghost { background: transparent; color: #111827; border: 1px solid #d1d5db; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .btnrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+    input[type="number"] {
+      width: 100%; padding: 12px 12px; border: 1px solid #d1d5db; border-radius: 12px;
+      font-size: 16px; background: #fff;
+    }
+    label { display: block; font-weight: 650; margin-bottom: 6px; }
+    .formgrid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (max-width: 700px) { .formgrid { grid-template-columns: 1fr; } }
+    .pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #d1d5db; border-radius: 999px; padding: 7px 10px; background: white; font-size: 13px; }
+    .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .chartbox { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 10px; overflow: hidden; }
+    svg { width: 100%; height: 430px; display: block; }
+    #screenTrial.revisionMode svg { height: 395px; }
+    #screenTrial.revisionMode .chartbox { padding: 8px; }
+    #screenTrial.revisionMode .advisor { padding: 12px; }
+    #screenTrial.revisionMode .metric div { padding: 9px 11px; font-size: 15px; }
+    #screenTrial.revisionMode input[type="number"] { padding: 10px 11px; }
+    .advisor {
+      border: 1px solid #e5e7eb; border-radius: 16px; padding: 14px; background: linear-gradient(180deg, #fff, #fafafa);
+    }
+    .advisor-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #d1d5db, #f3f4f6); display:grid; place-items:center; font-weight: 800; }
+    .metric { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
+    .metric div { background: #f3f4f6; padding: 11px 12px; border-radius: 12px; font-size: 16px; }
+    .hidden { display: none !important; }
+    .notice { border-left: 4px solid var(--accent); padding: 10px 12px; background: #f9fafb; border-radius: 12px; margin: 10px 0; }
+    .warn { border-left-color: var(--red); background: #fef2f2; }
+    .ok { border-left-color: var(--green); background: #ecfdf5; }
+    textarea { width: 100%; height: 210px; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+    .insta {
+      border: 1px solid #dbdbdb; border-radius: 14px; overflow: hidden; background: white;
+      box-shadow: 0 8px 22px rgba(0,0,0,.06);
+    }
+    .instaHeader { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; }
+    .instaHeaderLeft { display:flex; align-items:center; gap:10px; min-width:0; }
+    .instaAvatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #f9ce34, #ee2a7b 55%, #6228d7);
+      padding:2px; flex: 0 0 auto;
+    }
+    .instaAvatarInner {
+      width:100%; height:100%; border-radius:50%; background:#111827; display:block;
+      overflow:hidden;
+    }
+    .instaAvatarInner img { width:100%; height:100%; object-fit:cover; display:block; }
+    .instaUserRow { display:flex; align-items:baseline; gap:8px; min-width:0; flex-wrap:wrap; }
+    .instaUser { font-size:15px; font-weight:400; line-height:1.1; color:#111827; }
+    .instaFollowerBadge {
+      font-size:13px; font-weight:800; color:#111827; background:#f3f4f6;
+      border:1px solid #e5e7eb; border-radius:999px; padding:2px 8px; white-space:nowrap;
+    }
+    #followersCount { font-size:14px; font-weight:900; color:#111827; }
+    .instaMore { font-size:20px; line-height:1; color:#111827; }
+    .instaMedia {
+      aspect-ratio: 4 / 3; border-top:1px solid #efefef; border-bottom:1px solid #efefef;
+      background: linear-gradient(135deg, #e0e7ff 0%, #dbeafe 34%, #dcfce7 100%);
+      display:flex; align-items:flex-end; justify-content:flex-start; position:relative; overflow:hidden;
+    }
+    #screenTrial.revisionMode .instaHeader { padding: 8px 10px; }
+    #screenTrial.revisionMode .instaMedia { aspect-ratio: 16 / 10; }
+    #screenTrial.revisionMode .instaSticker { margin: 10px; padding: 10px 12px; }
+    #screenTrial.revisionMode .instaSticker .headline { font-size: 16px; }
+    #screenTrial.revisionMode .instaActions { padding: 7px 10px 2px; }
+    #screenTrial.revisionMode .instaBody { padding: 2px 10px 8px; }
+    #screenTrial.revisionMode .instaComments { margin-top: 2px; }
+    #screenTrial.revisionMode .instaTime { margin-top: 4px; }
+    .instaMedia::before {
+      content:''; position:absolute; inset:0;
+      background: radial-gradient(circle at 25% 20%, rgba(255,255,255,.45), transparent 30%),
+                  radial-gradient(circle at 85% 80%, rgba(255,255,255,.35), transparent 22%);
+    }
+    .instaSticker {
+      position:relative; margin:14px; padding:14px 16px; max-width:90%;
+      background: rgba(255,255,255,.92); backdrop-filter: blur(4px);
+      border-radius: 14px; box-shadow: 0 8px 18px rgba(0,0,0,.08);
+    }
+    .instaSticker .kicker { font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:#6b7280; }
+    .instaSticker .headline { font-size:18px; font-weight:400; margin-top:2px; color:#111827; line-height:1.2; }
+    .instaSticker .headline .forecastNum { font-weight:700; }
+    .instaSticker .subline { font-size:12px; color:#4b5563; margin-top:4px; }
+    .instaActions { display:flex; align-items:center; justify-content:space-between; padding:9px 12px 4px; }
+    .instaIconsLeft, .instaIconsRight { display:flex; gap:14px; align-items:center; }
+    .instaIcon { font-size:20px; line-height:1; color:#111827; }
+    .instaBody { padding:2px 12px 12px; }
+    .instaLikes { font-size:13px; font-weight:700; margin-bottom:6px; }
+    .instaCaption, .instaComments, .instaTime { font-size:13px; line-height:1.35; }
+    .instaCaption b { margin-right:6px; }
+    .instaComments { color:#6b7280; margin-top:4px; }
+    .instaTime { color:#9ca3af; text-transform:uppercase; font-size:10px; letter-spacing:.06em; margin-top:7px; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h1>Stock Price Estimation Task</h1>
+      </div>
+      <div>
+        <div class="progress" aria-label="progress"><div id="progressBar"></div></div>
+        <div id="progressText" class="small muted" style="text-align:right;margin-top:6px;">Not started</div>
+      </div>
+    </div>
+
+    <section id="screenIntro" class="card">
+      <h2>Instructions</h2>
+      <p>You will see graphs showing the weekly closing price of anonymous stocks over the last 30 weeks. Your task is to forecast the stock price in week 31.</p>
+      <p>The task has two separate blocks. In Block 1, you will make all of your initial forecasts. In Block 2, you will see the same stocks again, view an advisor’s forecast, and make your final forecasts.</p>
+      <div class="notice">
+        <strong>Important:</strong> Please use only the information shown on the screen. Do not search online or use external tools.
+      </div>
+      <div class="btnrow">
+        <button id="beginBtn">Begin task</button>
+      </div>
+    </section>
+
+    <section id="screenTrial" class="card hidden">
+      <h2 id="trialTitle">Forecast trial</h2>
+      <p id="trialPrompt" class="muted"></p>
+      <div class="grid">
+        <div class="chartColumn">
+          <div class="chartbox"><svg id="trialChart" role="img" aria-label="forecast stock chart"></svg></div>
+          <div class="legend">
+            <span class="pill"><span class="dot" style="background:#111827"></span> Past prices</span>
+            <span class="pill dynamicLegend"><span class="dot" style="background:var(--cyan)"></span> Your initial forecast</span>
+            <span class="pill dynamicLegend"><span class="dot" style="background:var(--magenta)"></span> taylor101's forecast</span>
+          </div>
+        </div>
+        <aside class="sidebarColumn">
+          <div id="initialRecapPanel" class="advisor hidden">
+            <h3>Your initial forecast</h3>
+            <div class="metric">
+              <div><b id="recapPoint"></b></div>
+            </div>
+          </div>
+
+          <div id="advisorPanel" class="advisor hidden" style="margin-top:14px;">
+            <div id="instaCard" class="insta hidden" style="margin:0 0 14px;">
+              <div class="instaHeader">
+                <div class="instaHeaderLeft">
+                  <div class="instaAvatar"><div class="instaAvatarInner"><img src="data:image/png;base64,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" alt="taylor101 profile picture"></div></div>
+                  <div>
+                    <div class="instaUserRow"><span class="instaUser">taylor101</span><span class="instaFollowerBadge"><span id="followersCount">10M</span> followers</span></div>
+                  </div>
+                </div>
+                <div class="instaMore">•••</div>
+              </div>
+              <div class="instaMedia">
+                <div class="instaSticker">
+                  <div class="headline" id="instaHeadline">My forecast for this stock is: <span class="forecastNum">$0.00</span></div>
+                </div>
+              </div>
+              <div class="instaActions">
+                <div class="instaIconsLeft">
+                  <span class="instaIcon">♡</span>
+                  <span class="instaIcon">◌</span>
+                  <span class="instaIcon">↗</span>
+                </div>
+                <div class="instaIconsRight"><span class="instaIcon">🔖</span></div>
+              </div>
+              <div class="instaBody">
+                <div class="instaCaption hidden"><b>taylor101</b><span id="advisorAdvice"></span></div>
+                <div class="instaComments">View all 12 comments</div>
+                <div class="instaTime">2 hours ago</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="initialPanel" class="advisor">
+            <h3 id="initialQuestion">Please provide your initial forecast for the closing price of Stock A in the next period:</h3>
+            <div class="formgrid">
+              <div><label for="initialPoint" class="sr-only">Initial forecast</label><input id="initialPoint" type="number" step="0.01" min="0"></div>
+            </div>
+            <div id="initialWarn" class="notice warn hidden"></div>
+            <div class="btnrow"><button id="submitInitialBtn">Submit</button></div>
+          </div>
+
+          <div id="finalPanel" class="advisor hidden" style="margin-top:14px;">
+            <h3>Your final forecast</h3>
+            <p class="small muted">You may keep or revise your initial forecast after seeing the advisor’s forecast.</p>
+            <div class="formgrid">
+              <div><label for="finalPoint" class="sr-only">Final forecast</label><input id="finalPoint" type="number" step="0.01" min="0"></div>
+            </div>
+            <div id="finalWarn" class="notice warn hidden"></div>
+            <div class="btnrow"><button id="submitFinalBtn">Submit</button></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="screenTransition" class="card hidden">
+      <h2>Initial forecast block complete</h2>
+      <p>You have completed all initial forecasts. In the next block, you will see each stock again together with an advisor’s forecast. You may keep or revise your initial forecast.</p>
+      <div class="notice">
+        Your final forecasts are the ones that should be as accurate as possible.
+      </div>
+      <div class="btnrow">
+        <button id="beginRevisionBtn">Begin final forecast block</button>
+      </div>
+    </section>
+
+    <section id="screenDone" class="card hidden">
+      <h2>Task complete</h2>
+      <p id="autoSaveStatus">Saving your responses. Please wait...</p>
+      <div id="qualtricsStatus" class="notice ok hidden">The task sent complete trial-level data to the parent Qualtrics survey.</div>
+      <div id="summaryBox" class="notice hidden"></div>
+      <textarea id="resultsJSON" readonly class="hidden"></textarea>
+      <div class="btnrow hidden">
+        <button id="copyBtn">Copy JSON</button>
+        <button id="downloadBtn" class="secondary">Download CSV</button>
+        <button id="sendQualtricsBtn" class="ghost">Send to Qualtrics / parent survey</button>
+      </div>
+    </section>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  const qs = new URLSearchParams(window.location.search);
+  const CONFIG = {
+    pid: qs.get("pid") || qs.get("PROLIFIC_PID") || "anonymous",
+    presumed: (qs.get("presumed") || "smi").toLowerCase(), // expert, layperson, none, smi
+    followers: qs.get("followers") || "10M",
+    nTrials: Number(qs.get("nTrials") || 2)
+  };
+
+  const START_TIME = performance.now();
+  let phase = "intro";
+  let initialIndex = 0;
+  let revisionIndex = 0;
+  let trialStartTime = null;
+  const initialForecasts = [];
+  const responses = [];
+  let autoSendTimer = null;
+  let autoSendAttempts = 0;
+  let parentAcknowledgedSave = false;
+
+  function genSeries(seed, base, trend, vol){
+    let x = seed || 12345;
+    function rnd(){ x = (1103515245 * x + 12345) % 2147483648; return x / 2147483648; }
+    const arr = [];
+    let v = base;
+    for(let i=0;i<31;i++){
+      const seasonal = Math.sin(i / 3.2) * vol * 0.35;
+      const shock = (rnd() - .48) * vol;
+      v = Math.max(8, v + trend + seasonal + shock);
+      arr.push(Number(v.toFixed(2)));
+    }
+    return arr;
+  }
+
+  function buildTrials(){
+    const labels = ["Stock A","Stock B","Stock C","Stock D","Stock E","Stock F","Stock G","Stock H","Stock I","Stock J","Stock K","Stock L"];
+    const out = [];
+    for(let i=0;i<Math.min(CONFIG.nTrials, labels.length);i++){
+      const prices = genSeries(1100+i*31, 42+i*8, ((i%5)-1.6)*0.75, 5.2+i*0.55);
+      const truth = prices[30];
+      const bias = [0.07,-0.05,0.03,-0.08,0.05,-0.035,0.06,-0.045,0.02,-0.06,0.04,-0.03][i];
+      const advisorPoint = Number((truth * (1 + bias)).toFixed(2));
+      const intervalHalf = Math.max(3.5, truth * (0.07 + (i%3)*0.01));
+      out.push({
+        id: `trial_${i+1}`,
+        label: labels[i],
+        prices: prices.slice(0,30),
+        truth,
+        advisorPoint,
+        advisorLow: Number((advisorPoint - intervalHalf).toFixed(2)),
+        advisorHigh: Number((advisorPoint + intervalHalf).toFixed(2))
+      });
+    }
+    return out;
+  }
+
+  const testTrials = buildTrials();
+
+  const $ = id => document.getElementById(id);
+  const screens = ["screenIntro","screenTrial","screenTransition","screenDone"];
+  function show(id){ screens.forEach(s => $(s).classList.toggle("hidden", s !== id)); }
+  function money(v){ return v === null || Number.isNaN(Number(v)) ? "—" : `$${Number(v).toFixed(2)}`; }
+  function num(id){ const v = Number($(id).value); return Number.isFinite(v) ? v : null; }
+  function setWarn(id, msg){ const el = $(id); el.textContent = msg || ""; el.classList.toggle("hidden", !msg); }
+  function intervalText(lo, hi){
+    return (lo === null || hi === null || lo === undefined || hi === undefined) ? "—" : `${money(lo)} – ${money(hi)}`;
+  }
+
+  function advisorLabel(){
+    if(CONFIG.presumed === "expert") return {name:"Financial analyst", cred:"Source described as a well-known financial analyst with extensive stock forecasting knowledge."};
+    if(CONFIG.presumed === "layperson") return {name:"Everyday source", cred:"Source described as a non-expert with no special stock forecasting knowledge."};
+    if(CONFIG.presumed === "none") return {name:"Forecast source", cred:"No identifying information is provided about this source."};
+    return {name:"taylor101", cred:`Instagram account owner · ${CONFIG.followers} followers`};
+  }
+
+  function initConditionSummary(){
+    // Intro-screen condition labels are intentionally hidden from participants.
+  }
+
+  function escapeHTML(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+
+  function updateProgress(){
+    const total = 2 * testTrials.length;
+    let done = 0;
+    if(phase === "intro") done = 0;
+    if(phase === "initial") done = initialIndex;
+    if(phase === "transition") done = testTrials.length;
+    if(phase === "revision") done = testTrials.length + revisionIndex;
+    if(phase === "done") done = total;
+    const pct = Math.round(100 * done / total);
+    $("progressBar").style.width = `${pct}%`;
+    if(phase === "done") $("progressText").textContent = "Complete";
+    else if(phase === "initial") $("progressText").textContent = `Block 1: ${initialIndex} of ${testTrials.length}`;
+    else if(phase === "revision") $("progressText").textContent = `Block 2: ${revisionIndex} of ${testTrials.length}`;
+    else if(phase === "transition") $("progressText").textContent = `Block 1 complete`;
+    else $("progressText").textContent = "Not started";
+  }
+
+  function drawChart(svg, trial, opts={}){
+    const width = 900, height = 430, pad = {l:74,r:28,t:24,b:58};
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    const values = [...trial.prices];
+    [opts.initialPoint, opts.advisorPoint, opts.finalPoint, opts.truth].forEach(v => { if(v !== undefined && v !== null && Number.isFinite(Number(v))) values.push(Number(v)); });
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const yMin = Math.max(0, min - (max-min || 10)*0.25 - 5);
+    const yMax = max + (max-min || 10)*0.25 + 5;
+    const x = i => pad.l + (i-1) * (width-pad.l-pad.r) / 30;
+    const y = v => height-pad.b - (v-yMin) * (height-pad.t-pad.b) / (yMax-yMin);
+    const line = trial.prices.map((v,i) => `${i===0?'M':'L'} ${x(i+1).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
+    const grid = [];
+    for(let k=0;k<5;k++){
+      const yy = pad.t + k*(height-pad.t-pad.b)/4;
+      const val = yMax - k*(yMax-yMin)/4;
+      grid.push(`<line x1="${pad.l}" y1="${yy}" x2="${width-pad.r}" y2="${yy}" stroke="#e5e7eb"/>`);
+      grid.push(`<text x="${pad.l-10}" y="${yy+5}" text-anchor="end" font-size="20" fill="#6b7280">${val.toFixed(0)}</text>`);
+    }
+    for(let k=1;k<=6;k++){
+      const wk = k*5;
+      const xx = x(wk);
+      grid.push(`<line x1="${xx}" y1="${pad.t}" x2="${xx}" y2="${height-pad.b}" stroke="#f3f4f6"/>`);
+      grid.push(`<text x="${xx}" y="${height-pad.b+30}" text-anchor="middle" font-size="20" fill="#6b7280">${wk}</text>`);
+    }
+    const markers = [];
+    function marker(v, color, label, dy=0){
+      if(v === undefined || v === null || !Number.isFinite(Number(v))) return;
+      const xx = x(31), yy = y(Number(v));
+      markers.push(`<circle cx="${xx}" cy="${yy}" r="7" fill="${color}" stroke="#fff" stroke-width="2"/>`);
+    }
+    function interval(lo, hi, color){
+      if(lo === undefined || hi === undefined || lo === null || hi === null) return;
+      const xx = x(31);
+      markers.push(`<line x1="${xx}" x2="${xx}" y1="${y(lo)}" y2="${y(hi)}" stroke="${color}" stroke-width="4" opacity=".75"/>`);
+      markers.push(`<line x1="${xx-10}" x2="${xx+10}" y1="${y(lo)}" y2="${y(lo)}" stroke="${color}" stroke-width="4" opacity=".75"/>`);
+      markers.push(`<line x1="${xx-10}" x2="${xx+10}" y1="${y(hi)}" y2="${y(hi)}" stroke="${color}" stroke-width="4" opacity=".75"/>`);
+    }
+    marker(opts.initialPoint, "#00a8c8", "Initial forecast", -18);
+    marker(opts.advisorPoint, "#d946ef", "taylor101's forecast", 18);
+    marker(opts.finalPoint, "#facc15", "Final forecast", 34);
+    marker(opts.truth, "#059669", "Actual", 50);
+    svg.innerHTML = `
+      <rect width="${width}" height="${height}" rx="14" fill="#fff"/>
+      ${grid.join("")}
+      <line x1="${pad.l}" y1="${height-pad.b}" x2="${width-pad.r}" y2="${height-pad.b}" stroke="#9ca3af"/>
+      <line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${height-pad.b}" stroke="#9ca3af"/>
+      <path d="${line}" fill="none" stroke="#111827" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+      ${trial.prices.map((v,i)=>`<circle cx="${x(i+1)}" cy="${y(v)}" r="3" fill="#111827"/>`).join("")}
+      ${markers.join("")}
+      <text x="${width/2}" y="${height-12}" text-anchor="middle" font-size="21" font-weight="700" fill="#6b7280">Period</text>
+      <text transform="translate(22 ${height/2}) rotate(-90)" text-anchor="middle" font-size="21" font-weight="700" fill="#6b7280">Closing price</text>
+      <text x="${x(31)}" y="${height-pad.b+30}" text-anchor="middle" font-size="20" fill="#6b7280">31</text>
+    `;
+  }
+
+  function resetInputs(){
+    ["initialPoint","finalPoint"].forEach(id => $(id).value = "");
+    setWarn("initialWarn", "");
+    setWarn("finalWarn", "");
+  }
+
+  function setDynamicLegendVisible(isVisible){
+    document.querySelectorAll(".dynamicLegend").forEach(el => {
+      el.classList.toggle("hidden", !isVisible);
+    });
+  }
+
+  function initialQuestionText(label){
+    if(label === "Stock A") return "Please provide your initial forecast for the closing price of Stock A in the next period:";
+    if(label === "Stock B") return "Please provide your initial forecast for the closing price of Stock B in the next period:";
+    return `Please provide your initial forecast for the closing price of ${label} in the next period:`;
+  }
+
+  function renderInitialTrial(){
+    phase = "initial";
+    $("screenTrial").classList.remove("revisionMode");
+    updateProgress();
+    resetInputs();
+    trialStartTime = performance.now();
+    const t = testTrials[initialIndex];
+    $("trialTitle").textContent = t.label;
+    $("trialPrompt").textContent = "";
+    $("initialQuestion").textContent = initialQuestionText(t.label);
+    $("initialRecapPanel").classList.add("hidden");
+    $("advisorPanel").classList.add("hidden");
+    $("finalPanel").classList.add("hidden");
+    $("initialPanel").classList.remove("hidden");
+    setDynamicLegendVisible(false);
+    drawChart($("trialChart"), t, {});
+    show("screenTrial");
+  }
+
+  function validatePoint(pointId, warnId){
+    const point = num(pointId);
+    if(point === null || point <= 0){ setWarn(warnId, "Please enter a positive forecast."); return false; }
+    setWarn(warnId, ""); return true;
+  }
+
+  function submitInitial(){
+    if(!validatePoint("initialPoint","initialWarn")) return;
+    const t = testTrials[initialIndex];
+    initialForecasts[initialIndex] = {
+      trial_index: initialIndex + 1,
+      trial_id: t.id,
+      initial_point: num("initialPoint"),
+      rt_initial_ms: Math.round(performance.now() - trialStartTime)
+    };
+    initialIndex += 1;
+    if(initialIndex >= testTrials.length){
+      phase = "transition";
+      updateProgress();
+      show("screenTransition");
+    } else {
+      renderInitialTrial();
+    }
+  }
+
+  function renderRevisionTrial(){
+    phase = "revision";
+    $("screenTrial").classList.add("revisionMode");
+    updateProgress();
+    resetInputs();
+    trialStartTime = performance.now();
+    const t = testTrials[revisionIndex];
+    const init = initialForecasts[revisionIndex];
+    $("trialTitle").textContent = t.label;
+    $("trialPrompt").textContent = `You are seeing ${t.label} again. Review your initial forecast and the advisor’s forecast, then submit your final forecast.`;
+
+    $("initialPanel").classList.add("hidden");
+    $("initialRecapPanel").classList.remove("hidden");
+    $("advisorPanel").classList.remove("hidden");
+    $("finalPanel").classList.remove("hidden");
+    setDynamicLegendVisible(true);
+
+    $("recapPoint").textContent = money(init.initial_point);
+    $("instaCard").classList.toggle("hidden", CONFIG.presumed !== "smi");
+    $("followersCount").textContent = CONFIG.followers;
+    const adviceText = document.getElementById("advisorAdvice");
+    if(adviceText) adviceText.textContent = "";
+    const headline = document.getElementById("instaHeadline");
+    if(headline) headline.innerHTML = `My forecast for this stock is: <span class="forecastNum">${money(t.advisorPoint)}</span>`;
+    $("finalPoint").value = "";
+
+    drawChart($("trialChart"), t, {
+      initialPoint: init.initial_point,
+      advisorPoint: t.advisorPoint
+    });
+    show("screenTrial");
+  }
+
+  function clamp01(v){ if(!Number.isFinite(v)) return null; return Math.max(0, Math.min(1, v)); }
+
+  function submitFinal(){
+    if(!validatePoint("finalPoint","finalWarn")) return;
+    const t = testTrials[revisionIndex];
+    const init = initialForecasts[revisionIndex];
+    const initialPoint = init.initial_point;
+    const finalPoint = num("finalPoint");
+    const denom = t.advisorPoint - initialPoint;
+    const denomAbs = Math.abs(denom);
+    const adviceShift = denom === 0 ? null : (finalPoint - initialPoint) / denom;
+    const woaAbs = denomAbs === 0 ? null : Math.abs(finalPoint - initialPoint) / denomAbs;
+    const woaWinsor = woaAbs === null ? null : clamp01(woaAbs);
+    const woe = denomAbs === 0 ? null : Math.abs(t.advisorPoint - finalPoint) / denomAbs;
+    const row = {
+      participant_id: CONFIG.pid,
+      condition_presumed: CONFIG.presumed,
+      condition_followers: CONFIG.followers,
+      task_structure: "initial_block_then_final_block",
+      trial_index: revisionIndex + 1,
+      trial_id: t.id,
+      stock_label: t.label,
+      truth_week31: t.truth,
+      advisor_point: t.advisorPoint,
+      initial_point: initialPoint,
+      final_point: finalPoint,
+      advice_shift: adviceShift,
+      woa_abs: woaAbs,
+      woa_winsor_0_1: woaWinsor,
+      woe: woe,
+      adjusted_initial: finalPoint !== initialPoint ? 1 : 0,
+      aap: Math.abs(finalPoint - initialPoint),
+      apap: initialPoint === 0 ? null : Math.abs(finalPoint - initialPoint) / initialPoint * 100,
+      initial_abs_error: Math.abs(initialPoint - t.truth),
+      final_abs_error: Math.abs(finalPoint - t.truth),
+      improvement_abs_error: Math.abs(initialPoint - t.truth) - Math.abs(finalPoint - t.truth),
+      rt_initial_ms: init.rt_initial_ms,
+      rt_final_ms: Math.round(performance.now() - trialStartTime),
+      historical_prices: t.prices.join("|")
+    };
+    responses.push(row);
+    revisionIndex += 1;
+    if(revisionIndex >= testTrials.length) finishTask(); else renderRevisionTrial();
+  }
+
+  function mean(arr){ const xs = arr.filter(v => Number.isFinite(v)); return xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : null; }
+
+  function finishTask(){
+    phase = "done";
+    updateProgress();
+    const summary = {
+      participant_id: CONFIG.pid,
+      condition_presumed: CONFIG.presumed,
+      condition_followers: CONFIG.followers,
+      task_structure: "initial_block_then_final_block",
+      n_trials: responses.length,
+      mean_woa_winsor_0_1: mean(responses.map(r => r.woa_winsor_0_1)),
+      mean_woa_abs_raw: mean(responses.map(r => r.woa_abs)),
+      mean_advice_shift: mean(responses.map(r => r.advice_shift)),
+      mean_initial_abs_error: mean(responses.map(r => r.initial_abs_error)),
+      mean_final_abs_error: mean(responses.map(r => r.final_abs_error)),
+      mean_improvement_abs_error: mean(responses.map(r => r.improvement_abs_error)),
+      total_duration_ms: Math.round(performance.now() - START_TIME)
+    };
+    const payload = {summary, initial_forecasts: initialForecasts, responses};
+    $("resultsJSON").value = JSON.stringify(payload, null, 2);
+    $("summaryBox").innerHTML = `Mean WOA winsorized 0–1: <b>${summary.mean_woa_winsor_0_1?.toFixed(3) ?? "NA"}</b><br>Mean improvement in absolute error: <b>${summary.mean_improvement_abs_error?.toFixed(2) ?? "NA"}</b>`;
+    show("screenDone");
+    startAutoSendToParent();
+  }
+
+  function valForSave(v){
+    if(v === null || v === undefined || Number.isNaN(v)) return "";
+    return String(v);
+  }
+
+  function flattenPayload(payload){
+    const flat = {
+      graphical_task_complete: "1",
+      graphical_task_version: "2trials_flat_v1",
+      graphical_task_pid: payload.summary.participant_id,
+      graphical_task_presumed: payload.summary.condition_presumed,
+      graphical_task_followers: payload.summary.condition_followers,
+      graphical_task_structure: payload.summary.task_structure,
+      graphical_task_n_trials: payload.summary.n_trials,
+      graphical_task_mean_woa: payload.summary.mean_woa_winsor_0_1,
+      graphical_task_mean_woa_raw: payload.summary.mean_woa_abs_raw,
+      graphical_task_mean_advice_shift: payload.summary.mean_advice_shift,
+      graphical_task_mean_initial_abs_error: payload.summary.mean_initial_abs_error,
+      graphical_task_mean_final_abs_error: payload.summary.mean_final_abs_error,
+      graphical_task_mean_improvement: payload.summary.mean_improvement_abs_error,
+      graphical_task_total_duration_ms: payload.summary.total_duration_ms
+    };
+
+    payload.responses.forEach((r, idx) => {
+      const p = `graphical_task_t${idx + 1}_`;
+      flat[p + "trial_id"] = r.trial_id;
+      flat[p + "stock_label"] = r.stock_label;
+      flat[p + "truth_week31"] = r.truth_week31;
+      flat[p + "advisor_point"] = r.advisor_point;
+      flat[p + "initial_point"] = r.initial_point;
+      flat[p + "final_point"] = r.final_point;
+      flat[p + "advice_shift"] = r.advice_shift;
+      flat[p + "woa_abs"] = r.woa_abs;
+      flat[p + "woa_winsor_0_1"] = r.woa_winsor_0_1;
+      flat[p + "woe"] = r.woe;
+      flat[p + "adjusted_initial"] = r.adjusted_initial;
+      flat[p + "initial_abs_error"] = r.initial_abs_error;
+      flat[p + "final_abs_error"] = r.final_abs_error;
+      flat[p + "improvement_abs_error"] = r.improvement_abs_error;
+      flat[p + "rt_initial_ms"] = r.rt_initial_ms;
+      flat[p + "rt_final_ms"] = r.rt_final_ms;
+      flat[p + "historical_prices"] = r.historical_prices;
+    });
+
+    return flat;
+  }
+
+  function setQualtricsValue(key, value){
+    try {
+      if(window.Qualtrics && Qualtrics.SurveyEngine){
+        if(typeof Qualtrics.SurveyEngine.setEmbeddedData === "function"){
+          Qualtrics.SurveyEngine.setEmbeddedData(key, value);
+        }
+        if(typeof Qualtrics.SurveyEngine.setJSEmbeddedData === "function"){
+          Qualtrics.SurveyEngine.setJSEmbeddedData(key, value);
+        }
+      }
+    } catch(e) { console.warn("Qualtrics embedded-data save failed:", e); }
+  }
+
+  function sendToQualtrics(showStatus=true){
+    const json = $("resultsJSON").value;
+    if(!json) return;
+    const payload = JSON.parse(json);
+    const flat = flattenPayload(payload);
+
+    // Direct save only works when the task is running inside Qualtrics itself.
+    // When hosted on GitHub Pages inside a Qualtrics iframe, the parent survey must save the data via postMessage.
+    setQualtricsValue("graphical_task_json", json);
+    Object.keys(flat).forEach(key => setQualtricsValue(key, valForSave(flat[key])));
+
+    try {
+      window.parent.postMessage({
+        type:"ONKAL_GRAPHICAL_TASK_COMPLETE",
+        source:"smi_onkal_graphical_task",
+        payload,
+        flat,
+        json
+      }, "*");
+    } catch(e) { console.warn("Parent postMessage failed:", e); }
+    if(showStatus) $("qualtricsStatus").classList.remove("hidden");
+  }
+
+  function startAutoSendToParent(){
+    const status = $("autoSaveStatus");
+    if(status) status.textContent = "Saving your responses. Please wait...";
+    sendToQualtrics(false);
+    autoSendAttempts = 0;
+    if(autoSendTimer) clearInterval(autoSendTimer);
+    autoSendTimer = setInterval(() => {
+      if(parentAcknowledgedSave || autoSendAttempts >= 20){
+        clearInterval(autoSendTimer);
+        autoSendTimer = null;
+        if(!parentAcknowledgedSave && status){
+          status.textContent = "Task complete. Please continue in the survey.";
+        }
+        return;
+      }
+      sendToQualtrics(false);
+      autoSendAttempts += 1;
+    }, 250);
+  }
+
+  window.addEventListener("message", function(event){
+    if(!event.data || event.data.type !== "ONKAL_GRAPHICAL_TASK_ACK") return;
+    parentAcknowledgedSave = true;
+    if(autoSendTimer){ clearInterval(autoSendTimer); autoSendTimer = null; }
+    const status = $("autoSaveStatus");
+    if(status) status.textContent = "Responses saved. Please continue in the survey.";
+  });
+
+  function toCSV(rows){
+    if(!rows.length) return "";
+    const cols = Object.keys(rows[0]);
+    const esc = v => {
+      if(v === null || v === undefined) return "";
+      const s = String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+    };
+    return cols.join(",") + "\n" + rows.map(r => cols.map(c => esc(r[c])).join(",")).join("\n");
+  }
+
+  function downloadCSV(){
+    const csv = toCSV(responses);
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `graphical_advice_task_${CONFIG.pid}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  $("beginBtn").addEventListener("click", renderInitialTrial);
+  $("beginRevisionBtn").addEventListener("click", renderRevisionTrial);
+  $("submitInitialBtn").addEventListener("click", submitInitial);
+  $("submitFinalBtn").addEventListener("click", submitFinal);
+  $("copyBtn").addEventListener("click", async () => {
+    await navigator.clipboard.writeText($("resultsJSON").value);
+    $("copyBtn").textContent = "Copied";
+    setTimeout(()=>$("copyBtn").textContent="Copy JSON", 1200);
+  });
+  $("downloadBtn").addEventListener("click", downloadCSV);
+  $("sendQualtricsBtn").addEventListener("click", () => sendToQualtrics(true));
+
+  initConditionSummary();
+  updateProgress();
+})();
+</script>
+</body>
+</html>
