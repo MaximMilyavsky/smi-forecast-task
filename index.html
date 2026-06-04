@@ -113,7 +113,7 @@
     .chartbox svg.clickableForecast { cursor: grab; touch-action: none; user-select: none; }
     .chartbox svg.clickableForecast.dragging { cursor: grabbing; }
     .chartbox svg.clickableForecast .forecastZone { cursor: default !important; }
-    svg { width: 100%; height: 430px; display: block; }
+    svg { width: 100%; height: 470px; display: block; }
     .panSurface { cursor: grab; }
     .panSurface.dragging { cursor: grabbing; }
     .chartbox svg.clickableForecast.forecastHover { cursor: default !important; }
@@ -123,8 +123,8 @@
     .historyMarkers, .forecastMarkers { pointer-events: none; }
     .forecastZone, .forecastLine, .forecastClickTarget, .forecastClickOverlay { cursor: default !important; }
     .forecastMarkers { pointer-events: none; }
-    #screenTrial.revisionMode svg { height: 395px; }
-    #screenTrial.revisionMode .chartbox { padding: 8px; }
+    #screenTrial.revisionMode svg { height: 470px; }
+    #screenTrial.revisionMode .chartbox { padding: 10px; }
     #screenTrial.revisionMode .advisor { padding: 12px; }
     #screenTrial.revisionMode .metric div { padding: 9px 11px; font-size: 15px; }
     #screenTrial.revisionMode input[type="number"] { padding: 10px 11px; }
@@ -1821,7 +1821,9 @@
   }
 
   function drawChart(svg, trial, opts={}){
-    const width = 900, height = 500, pad = {l:74,r:28,t:30,b:118};
+    const width = 900, height = 500;
+    const isRevisionChart = phase === "revision";
+    const pad = {l:74,r:28,t:30,b:isRevisionChart ? 82 : 104};
     svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
     const interactive = opts.interactive === true;
     svg.classList.toggle("clickableForecast", interactive);
@@ -1834,15 +1836,10 @@
     const xMinPeriod = Math.min(...historicalPeriods);
     const xMaxPeriod = forecastPeriod;
     const valuesForInitialYView = [...trial.prices];
-    // In Block 2, the initial and advisor forecasts are fixed information on the screen,
-    // so the first view should include them. The participant's new forecast does not
-    // re-scale the chart; participants can pan vertically instead.
-    if(phase === "revision"){
-      [opts.initialPoint, opts.advisorPoint, opts.truth].forEach(v => {
-        const n = Number(v);
-        if(Number.isFinite(n)) valuesForInitialYView.push(n);
-      });
-    }
+    // Keep the initial Y-axis scale identical across Block 1 and Block 2 for the same stock.
+    // Do not expand the first Block 2 view to include the initial/advisor/final markers,
+    // because that changes the apparent shape of the historical price series. Participants
+    // can pan vertically to reach forecasts outside the initial visible range.
     const valuesThatMustBeVisible = valuesForInitialYView
       .map(v => Number(v))
       .filter(v => Number.isFinite(v));
@@ -1865,6 +1862,9 @@
     }
 
     const stateKey = chartStateKey();
+    const markerValuesForInitialView = [opts.initialPoint, opts.advisorPoint]
+      .map(v => Number(v))
+      .filter(v => Number.isFinite(v));
     if(!yViewState[stateKey]){
       let yTickInterval = 5;
       let yMin = 70;
@@ -1885,6 +1885,44 @@
           yMax += yTickInterval;
         }
       }
+
+      // In Block 2, keep the same scale span as Block 1 whenever possible,
+      // but auto-pan the initial viewport so the initial and advisor markers
+      // are visible. Only expand the scale if the historical prices plus
+      // those markers cannot fit within the historical-only span.
+      if(isRevisionChart && markerValuesForInitialView.length){
+        const requiredValues = valuesThatMustBeVisible.concat(markerValuesForInitialView);
+        const reqMin = Math.min(...requiredValues);
+        const reqMax = Math.max(...requiredValues);
+        const baseSpan = yMax - yMin;
+        const markerPadding = Math.max(baseSpan * 0.04, yTickInterval * 0.35, 1);
+        const paddedReqMin = reqMin - markerPadding;
+        const paddedReqMax = reqMax + markerPadding;
+
+        if((paddedReqMax - paddedReqMin) <= baseSpan){
+          if(paddedReqMin < yMin){
+            yMin = paddedReqMin;
+            yMax = yMin + baseSpan;
+          }
+          if(paddedReqMax > yMax){
+            yMax = paddedReqMax;
+            yMin = yMax - baseSpan;
+          }
+        } else {
+          const combinedRange = Math.max(reqMax - reqMin, 1);
+          padding = Math.max(combinedRange * 0.10, 2);
+          yTickInterval = niceTickInterval(combinedRange + 2 * padding, 6);
+          yMin = yTickInterval * Math.floor((reqMin - padding) / yTickInterval);
+          yMax = yTickInterval * Math.ceil((reqMax + padding) / yTickInterval);
+          if(yMin === yMax){
+            yMin -= yTickInterval;
+            yMax += yTickInterval;
+          }
+        }
+        minRequired = Math.min(minRequired, reqMin);
+        maxRequired = Math.max(maxRequired, reqMax);
+      }
+
       yViewState[stateKey] = {
         yMin,
         yMax,
@@ -1913,12 +1951,11 @@
       const isForecastPeriod = period === forecastPeriod;
       grid.push(`<line x1="${xx}" y1="${pad.t}" x2="${xx}" y2="${height-pad.b}" stroke="${isForecastPeriod ? '#d1d5db' : '#f3f4f6'}" stroke-width="${isForecastPeriod ? 1.5 : 1}"/>`);
       if(isForecastPeriod){
-        grid.push(`<text x="${xx}" y="${height-pad.b+30}" text-anchor="middle" font-size="21" font-weight="900" fill="#111827">${period}</text>`);
-        grid.push(`<text x="${xx}" y="${height-pad.b+58}" text-anchor="end" font-size="15" font-weight="850" fill="#92400e">Forecast period #${forecastPeriod}</text>`);
-        grid.push(`<text x="${xx}" y="${height-pad.b+78}" text-anchor="end" font-size="12" font-weight="750" fill="#92400e">Click shaded area to place forecast</text>`);
-        grid.push(`<text x="${xx}" y="${height-pad.b+94}" text-anchor="end" font-size="11" font-weight="700" fill="#92400e">Drag chart up/down if needed</text>`);
+        grid.push(`<text x="${xx}" y="${height-pad.b+28}" text-anchor="middle" font-size="21" font-weight="900" fill="#111827">${period}</text>`);
+        grid.push(`<text x="${xx}" y="${height-pad.b+50}" text-anchor="end" font-size="14" font-weight="850" fill="#92400e">Forecast period #${forecastPeriod}</text>`);
+        grid.push(`<text x="${xx}" y="${height-pad.b+67}" text-anchor="end" font-size="11" font-weight="750" fill="#92400e">Click shaded area; drag chart up/down if needed</text>`);
       } else {
-        grid.push(`<text x="${xx}" y="${height-pad.b+30}" text-anchor="middle" font-size="20" font-weight="400" fill="#6b7280">${period}</text>`);
+        grid.push(`<text x="${xx}" y="${height-pad.b+28}" text-anchor="middle" font-size="20" font-weight="400" fill="#6b7280">${period}</text>`);
       }
     }
 
@@ -1974,7 +2011,7 @@
       <g clip-path="url(#plotAreaClip)">
         <path d="${line}" fill="none" stroke="#111827" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
       </g>
-      <text x="${width/2}" y="${height-14}" text-anchor="middle" font-size="21" font-weight="700" fill="#6b7280">Period</text>
+      <text x="${width/2}" y="${height-10}" text-anchor="middle" font-size="21" font-weight="700" fill="#6b7280">Period</text>
       <text transform="translate(22 ${height/2}) rotate(-90)" text-anchor="middle" font-size="21" font-weight="700" fill="#6b7280">Closing price index</text>
       <g class="historyMarkers">${historyMarkers}</g>
       <g class="forecastMarkers">${markers.join("")}</g>
@@ -1995,18 +2032,46 @@
     };
   }
 
+  function svgPointFromEvent(svg, event){
+    const meta = svg.__chartMeta;
+    if(!meta) return null;
+
+    // Use the browser's actual SVG transform so clicks stay aligned even when
+    // the CSS height differs from the SVG viewBox aspect ratio. A simple
+    // getBoundingClientRect() scale creates a vertical bias in that case.
+    if(svg.createSVGPoint && svg.getScreenCTM){
+      const ctm = svg.getScreenCTM();
+      if(ctm){
+        const pt = svg.createSVGPoint();
+        pt.x = event.clientX;
+        pt.y = event.clientY;
+        const mapped = pt.matrixTransform(ctm.inverse());
+        return { viewX: mapped.x, viewY: mapped.y };
+      }
+    }
+
+    // Fallback for unusual browsers.
+    const rect = svg.getBoundingClientRect();
+    if(!rect.width || !rect.height) return null;
+    return {
+      viewX: (event.clientX - rect.left) * meta.width / rect.width,
+      viewY: (event.clientY - rect.top) * meta.height / rect.height
+    };
+  }
+
+  function isInsideForecastPlot(meta, p){
+    if(!meta || !p) return false;
+    const insideForecastZone = p.viewX >= meta.forecastBandLeft && p.viewX <= meta.forecastBandRight;
+    const insidePlot = p.viewY >= meta.plotTop && p.viewY <= meta.plotBottom;
+    return insideForecastZone && insidePlot;
+  }
+
   function chartValueFromClick(event){
     const svg = $("trialChart");
     const meta = svg.__chartMeta;
-    if(!meta) return null;
-    const rect = svg.getBoundingClientRect();
-    if(!rect.width || !rect.height) return null;
-    const viewX = (event.clientX - rect.left) * meta.width / rect.width;
-    const viewY = (event.clientY - rect.top) * meta.height / rect.height;
-    const insideForecastZone = viewX >= meta.forecastBandLeft && viewX <= meta.forecastBandRight;
-    const insidePlot = viewY >= meta.plotTop && viewY <= meta.plotBottom;
-    if(!insideForecastZone || !insidePlot) return null;
-    const proportionFromTop = (viewY - meta.plotTop) / (meta.plotBottom - meta.plotTop);
+    const p = svgPointFromEvent(svg, event);
+    if(!isInsideForecastPlot(meta, p)) return null;
+    const proportionFromTop = (p.viewY - meta.plotTop) / (meta.plotBottom - meta.plotTop);
     const value = meta.yMax - proportionFromTop * (meta.yMax - meta.yMin);
     return Number(value.toFixed(2));
   }
@@ -2020,13 +2085,8 @@
       svg.style.cursor = "grabbing";
       return;
     }
-    const rect = svg.getBoundingClientRect();
-    if(!rect.width || !rect.height) return;
-    const viewX = (event.clientX - rect.left) * meta.width / rect.width;
-    const viewY = (event.clientY - rect.top) * meta.height / rect.height;
-    const insideForecastZone = viewX >= meta.forecastBandLeft && viewX <= meta.forecastBandRight;
-    const insidePlot = viewY >= meta.plotTop && viewY <= meta.plotBottom;
-    if(insideForecastZone && insidePlot){
+    const p = svgPointFromEvent(svg, event);
+    if(isInsideForecastPlot(meta, p)){
       svg.classList.add("forecastHover");
       svg.style.cursor = "default";
     } else {
@@ -2062,20 +2122,15 @@
     if(!meta || !svg.classList.contains("clickableForecast")) return;
     if(event.button !== undefined && event.button !== 0) return;
 
-    const rect = svg.getBoundingClientRect();
-    if(rect.width && rect.height){
-      const viewX = (event.clientX - rect.left) * meta.width / rect.width;
-      const viewY = (event.clientY - rect.top) * meta.height / rect.height;
-      const insideForecastZone = viewX >= meta.forecastBandLeft && viewX <= meta.forecastBandRight;
-      const insidePlot = viewY >= meta.plotTop && viewY <= meta.plotBottom;
-      if(insideForecastZone && insidePlot){
-        return;
-      }
+    const p = svgPointFromEvent(svg, event);
+    if(isInsideForecastPlot(meta, p)){
+      return;
     }
 
     chartDragState = {
       pointerId: event.pointerId,
       startY: event.clientY,
+      startViewY: p ? p.viewY : null,
       startYMin: meta.yMin,
       startYMax: meta.yMax,
       stateKey: meta.stateKey,
@@ -2096,10 +2151,12 @@
     const meta = svg.__chartMeta;
     const state = yViewState[chartDragState.stateKey];
     if(!meta || !state) return;
-    const dy = event.clientY - chartDragState.startY;
-    if(Math.abs(dy) > 3) chartDragState.moved = true;
+    const p = svgPointFromEvent(svg, event);
+    const dyClient = event.clientY - chartDragState.startY;
+    const dyView = (p && chartDragState.startViewY !== null) ? (p.viewY - chartDragState.startViewY) : dyClient;
+    if(Math.abs(dyClient) > 3) chartDragState.moved = true;
     const plotHeight = Math.max(1, meta.plotBottom - meta.plotTop);
-    const valueDelta = dy * (chartDragState.startYMax - chartDragState.startYMin) / plotHeight;
+    const valueDelta = dyView * (chartDragState.startYMax - chartDragState.startYMin) / plotHeight;
     let nextMin = chartDragState.startYMin + valueDelta;
     let nextMax = chartDragState.startYMax + valueDelta;
     const clamped = clampYView(state, nextMin, nextMax);
