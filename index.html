@@ -2417,9 +2417,12 @@
     const initialTruthDistance = init.initial_truth_distance;
     const denom = advisorPoint - initialPoint;
     const denomAbs = Math.abs(denom);
-    const adviceShift = denom === 0 ? null : (finalPoint - initialPoint) / denom;
-    const woaAbs = denomAbs === 0 ? null : Math.abs(finalPoint - initialPoint) / denomAbs;
-    const woaWinsor = woaAbs === null ? null : clamp01(woaAbs);
+    // Directional Weight of Advice (WOA): movement from initial toward the advisor.
+    // 0 = no movement; 1 = moved exactly to the advisor; >1 = overshot advisor;
+    // negative values = moved away from advisor.
+    const woaRaw = denom === 0 ? null : (finalPoint - initialPoint) / denom;
+    const adviceShift = woaRaw;
+    const woaWinsor = woaRaw === null ? null : clamp01(woaRaw);
     const woe = denomAbs === 0 ? null : Math.abs(advisorPoint - finalPoint) / denomAbs;
     const row = {
       participant_id: CONFIG.pid,
@@ -2446,7 +2449,9 @@
       initial_point: initialPoint,
       final_point: finalPoint,
       advice_shift: adviceShift,
-      woa_abs: woaAbs,
+      woa_raw: woaRaw,
+      // Legacy alias retained for existing Qualtrics/SPSS fields; value is now directional raw WOA.
+      woa_abs: woaRaw,
       woa_winsor_0_1: woaWinsor,
       woe: woe,
       adjusted_initial: finalPoint !== initialPoint ? 1 : 0,
@@ -2566,7 +2571,9 @@
       n_deteriorating_advice: responses.filter(r => r.advice_quality === 0).length,
       mean_initial_truth_distance: mean(responses.map(r => r.initial_truth_distance)),
       mean_woa_winsor_0_1: mean(responses.map(r => r.woa_winsor_0_1)),
-      mean_woa_abs_raw: mean(responses.map(r => r.woa_abs)),
+      mean_woa_raw: mean(responses.map(r => r.woa_raw)),
+      // Legacy alias retained for existing Qualtrics/SPSS fields; value is now directional raw WOA.
+      mean_woa_abs_raw: mean(responses.map(r => r.woa_raw)),
       mean_advice_shift: mean(responses.map(r => r.advice_shift)),
       mean_initial_abs_error: mean(responses.map(r => r.initial_abs_error)),
       mean_final_abs_error: mean(responses.map(r => r.final_abs_error)),
@@ -2588,7 +2595,7 @@
   function flattenPayload(payload){
     const flat = {
       graphical_task_complete: "1",
-      graphical_task_version: "6733_04_02_fixed20stocks_random_order_12historical_forecast16_stockid_v1",
+      graphical_task_version: "6733_04_02_fixed20stocks_random_order_12historical_forecast16_stockid_v2_directional_woa",
       graphical_task_pid: payload.summary.participant_id,
       graphical_task_presumed: payload.summary.condition_presumed,
       graphical_task_followers: payload.summary.condition_followers,
@@ -2618,7 +2625,8 @@
       graphical_task_n_deteriorating_advice: payload.summary.n_deteriorating_advice,
       graphical_task_mean_initial_truth_distance: payload.summary.mean_initial_truth_distance,
       graphical_task_mean_woa: payload.summary.mean_woa_winsor_0_1,
-      graphical_task_mean_woa_raw: payload.summary.mean_woa_abs_raw,
+      graphical_task_mean_woa_raw: payload.summary.mean_woa_raw,
+      graphical_task_mean_woa_abs_raw_legacy_alias: payload.summary.mean_woa_abs_raw,
       graphical_task_mean_advice_shift: payload.summary.mean_advice_shift,
       graphical_task_mean_initial_abs_error: payload.summary.mean_initial_abs_error,
       graphical_task_mean_final_abs_error: payload.summary.mean_final_abs_error,
@@ -2647,6 +2655,8 @@
       flat[p + "initial_point"] = r.initial_point;
       flat[p + "final_point"] = r.final_point;
       flat[p + "advice_shift"] = r.advice_shift;
+      flat[p + "woa_raw"] = r.woa_raw;
+      // Legacy alias retained for existing Qualtrics/SPSS fields; value is now directional raw WOA.
       flat[p + "woa_abs"] = r.woa_abs;
       flat[p + "woa_winsor_0_1"] = r.woa_winsor_0_1;
       flat[p + "woe"] = r.woe;
