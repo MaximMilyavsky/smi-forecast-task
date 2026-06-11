@@ -1812,7 +1812,52 @@
   const FORECAST_MAX = 150;
   const FORECAST_RANGE_MSG = `Please enter a forecast between ${FORECAST_MIN} and ${FORECAST_MAX}.`;
   const screens = ["screenIntro","screenTrial","screenTransition","screenProfileCheck","screenPostSurveyPurpose","screenPostSurveyComments","screenPostSurveyDemographics","screenDone"];
-  function show(id){ screens.forEach(s => $(s).classList.toggle("hidden", s !== id)); }
+
+  function activeScreenElement(){
+    return screens.map(s => $(s)).find(el => el && !el.classList.contains("hidden"));
+  }
+
+  function currentTaskHeight(){
+    const wrap = document.querySelector(".wrap");
+    const active = activeScreenElement();
+    if(!wrap || !active){
+      return Math.ceil(document.documentElement.scrollHeight || document.body.scrollHeight || 650);
+    }
+    const wrapRect = wrap.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    const extraBottomSpace = 34;
+    const measured = activeRect.bottom - wrapRect.top + extraBottomSpace;
+    return Math.max(180, Math.ceil(measured));
+  }
+
+  function postTaskHeightToParent(){
+    try {
+      window.parent.postMessage({
+        type: "ONKAL_GRAPHICAL_TASK_HEIGHT",
+        source: "smi_onkal_graphical_task",
+        height: currentTaskHeight()
+      }, "*");
+    } catch(e) {}
+  }
+
+  function scheduleTaskHeightPost(){
+    requestAnimationFrame(() => {
+      postTaskHeightToParent();
+      setTimeout(postTaskHeightToParent, 80);
+      setTimeout(postTaskHeightToParent, 300);
+    });
+  }
+
+  function show(id){
+    screens.forEach(s => $(s).classList.toggle("hidden", s !== id));
+    scheduleTaskHeightPost();
+  }
+
+  window.addEventListener("load", scheduleTaskHeightPost);
+  window.addEventListener("resize", scheduleTaskHeightPost);
+  if(window.ResizeObserver){
+    new ResizeObserver(scheduleTaskHeightPost).observe(document.body);
+  }
   function money(v){ return v === null || Number.isNaN(Number(v)) ? "—" : `£${Number(v).toFixed(2)}`; }
   function num(id){ const raw = $(id).value; if(raw === "") return null; const v = Number(raw); return Number.isFinite(v) ? v : null; }
   function setWarn(id, msg){ const el = $(id); el.textContent = msg || ""; el.classList.toggle("hidden", !msg); }
