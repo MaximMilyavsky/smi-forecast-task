@@ -13,7 +13,9 @@
       --line: #d1d5db;
       --accent: #111827;
       --cyan: #00a8c8;
-      --magenta: #d946ef;
+      --initial-blue: #1d4ed8;
+      --advice-magenta: #c026d3;
+      --magenta: #c026d3;
       --yellow: #facc15;
       --green: #059669;
       --red: #dc2626;
@@ -105,10 +107,10 @@
     .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
     .legendMarker { display: inline-block; flex: 0 0 auto; box-sizing: border-box; }
     .legendDotFilled { width: 10px; height: 10px; border-radius: 50%; background: #111827; }
-    .legendCircleHollow { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #2563eb; background: transparent; }
+    .legendCircleHollow { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--initial-blue); background: transparent; }
     .legendCircleHollowFinal { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #16a34a; background: transparent; }
     .legendDiamondWrap { width: 12px; height: 12px; display: inline-flex; align-items: center; justify-content: center; }
-    .legendDiamondHollow { width: 10px; height: 10px; border: 2px solid #d946ef; background: transparent; transform: rotate(45deg); }
+    .legendDiamondHollow { width: 10px; height: 10px; border: 2px solid var(--advice-magenta); background: transparent; transform: rotate(45deg); }
     .chartbox { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 10px; overflow: hidden; }
     .chartbox svg.clickableForecast { cursor: grab; touch-action: none; user-select: none; }
     .chartbox svg.clickableForecast.dragging { cursor: grabbing; }
@@ -191,6 +193,23 @@
     .instaSticker .kicker { font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:#6b7280; }
     .instaSticker .headline { font-size:18px; font-weight:400; margin-top:2px; color:#111827; line-height:1.2; }
     .instaSticker .headline .forecastNum { font-weight:700; }
+    .initialEstimateValue { color: var(--initial-blue); font-weight:800; }
+    .advisorEstimateValue { color: var(--advice-magenta); font-weight:800; }
+    #screenTrial.revisionMode #finalPoint,
+    #finalPanel #finalPoint,
+    input#finalPoint {
+      color: var(--final-green) !important;
+      -webkit-text-fill-color: var(--final-green) !important;
+      caret-color: var(--final-green) !important;
+      border-color: var(--final-green) !important;
+      font-weight: 900 !important;
+    }
+    #screenTrial.revisionMode #finalPoint:focus,
+    #finalPanel #finalPoint:focus {
+      outline: 2px solid rgba(22, 163, 74, .28);
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, .14);
+    }
+    #screenTrial.revisionMode #finalPoint::placeholder { color:#86efac; -webkit-text-fill-color:#86efac; font-weight:600; }
     .instaSticker .subline { font-size:12px; color:#4b5563; margin-top:4px; }
     .instaActions { display:flex; align-items:center; justify-content:space-between; padding:9px 12px 4px; }
     .instaIconsLeft, .instaIconsRight { display:flex; gap:14px; align-items:center; }
@@ -256,11 +275,11 @@
     .scaleOptions { display:grid; grid-template-columns: repeat(7, minmax(52px, 1fr)); gap:8px; align-items:end; }
     .scaleOptions label { display:grid; justify-items:center; gap:6px; font-size:13px; text-align:center; cursor:pointer; }
     .scaleOptions input { width:16px; height:16px; }
-    .postSurveyBlock { display:grid; gap:22px; max-width:980px; }
-    .postSurveyQuestion { border:1px solid var(--border); border-radius:14px; padding:18px; background:#fff; }
-    .postSurveyQuestion h3 { margin:0 0 12px; font-size:18px; color:#111827; }
-    .postSurveyQuestion p { margin:0 0 12px; }
-    .postSurveyTextarea { width:100%; max-width:760px; min-height:120px; resize:vertical; border:1px solid #9ca3af; border-radius:6px; padding:10px 12px; font:inherit; }
+    .postSurveyBlock { display:grid; gap:14px; max-width:980px; }
+    .postSurveyQuestion { border:1px solid var(--border); border-radius:14px; padding:14px; background:#fff; }
+    .postSurveyQuestion h3 { margin:0 0 8px; font-size:18px; color:#111827; }
+    .postSurveyQuestion p { margin:0 0 8px; }
+    .postSurveyTextarea { width:100%; max-width:760px; height:105px; min-height:52px; resize:vertical; border:1px solid #9ca3af; border-radius:6px; padding:10px 12px; font:inherit; }
     .postSurveyInput { width:160px; border:1px solid #9ca3af; border-radius:6px; padding:10px 12px; font:inherit; }
     #age.postSurveyInput { width:86px; max-width:86px; text-align:center; }
     .postSurveyOptions { display:grid; gap:10px; margin-top:10px; }
@@ -308,7 +327,7 @@
           <div id="initialRecapPanel" class="advisor hidden">
             <h3>Your initial forecast</h3>
             <div class="metric">
-              <div><b id="recapPoint"></b></div>
+              <div><b id="recapPoint" class="initialEstimateValue"></b></div>
             </div>
           </div>
 
@@ -358,7 +377,7 @@
             <h3>Your final forecast</h3>
             <p class="small muted forecastInstruction">You may keep or revise your initial forecast after seeing the advisor’s forecast.</p>
             <div class="formgrid">
-              <div><label for="finalPoint" class="sr-only">Final forecast</label><input id="finalPoint" type="number" step="0.01" min="50" max="150"></div>
+              <div><label for="finalPoint" class="sr-only">Final forecast</label><input id="finalPoint" type="number" step="0.01" min="50" max="150" style="color:#16a34a !important; -webkit-text-fill-color:#16a34a !important; border-color:#16a34a !important; font-weight:900;"></div>
             </div>
             <div id="finalWarn" class="notice warn hidden"></div>
             <div class="btnrow"><button id="submitFinalBtn">Submit</button></div>
@@ -465,21 +484,34 @@
       </div>
     </section>
 
-    <section id="screenPostSurvey" class="card hidden">
+    <section id="screenPostSurveyPurpose" class="card hidden">
       <h2>Final questions</h2>
       <div class="postSurveyBlock">
         <div class="postSurveyQuestion">
-          <h3>In your opinion, what was the purpose of this survey?</h3>
-          <textarea id="Survey_purpose" class="postSurveyTextarea"></textarea>
+          <h3>In your opinion, what was the purpose of this survey? <span class="requiredMark">*</span></h3>
+          <textarea id="Survey_purpose" class="postSurveyTextarea" minlength="10" aria-describedby="purposeWarn"></textarea>
+          <div id="purposeWarn" class="notice warn hidden"></div>
         </div>
+        <div class="btnrow"><button id="submitPurposeBtn">NEXT</button></div>
+      </div>
+    </section>
 
+    <section id="screenPostSurveyComments" class="card hidden">
+      <h2>Final questions</h2>
+      <div class="postSurveyBlock">
         <div class="postSurveyQuestion">
           <h3>Comments</h3>
           <p>You are now done with answering the questions about stock price forecasts (Part 1+2)</p>
           <p>If you have any comments (anything that was not clear or confusing), please feel free to provide them here.</p>
           <textarea id="Comments" class="postSurveyTextarea"></textarea>
         </div>
+        <div class="btnrow"><button id="submitCommentsBtn">NEXT</button></div>
+      </div>
+    </section>
 
+    <section id="screenPostSurveyDemographics" class="card hidden">
+      <h2>Final questions</h2>
+      <div class="postSurveyBlock">
         <div class="postSurveyQuestion">
           <h3>What is your sex? <span class="requiredMark">*</span></h3>
           <div class="postSurveyOptions" role="radiogroup" aria-label="Sex">
@@ -1779,7 +1811,7 @@
   const FORECAST_MIN = 50;
   const FORECAST_MAX = 150;
   const FORECAST_RANGE_MSG = `Please enter a forecast between ${FORECAST_MIN} and ${FORECAST_MAX}.`;
-  const screens = ["screenIntro","screenTrial","screenTransition","screenProfileCheck","screenPostSurvey","screenDone"];
+  const screens = ["screenIntro","screenTrial","screenTransition","screenProfileCheck","screenPostSurveyPurpose","screenPostSurveyComments","screenPostSurveyDemographics","screenDone"];
   function show(id){ screens.forEach(s => $(s).classList.toggle("hidden", s !== id)); }
   function money(v){ return v === null || Number.isNaN(Number(v)) ? "—" : `£${Number(v).toFixed(2)}`; }
   function num(id){ const raw = $(id).value; if(raw === "") return null; const v = Number(raw); return Number.isFinite(v) ? v : null; }
@@ -1808,12 +1840,12 @@
     if(phase === "initial") done = initialIndex;
     if(phase === "transition") done = testTrials.length;
     if(phase === "revision") done = testTrials.length + revisionIndex;
-    if(phase === "postSurvey") done = total;
+    if(phase === "postSurveyPurpose" || phase === "postSurveyComments" || phase === "postSurveyDemographics") done = total;
     if(phase === "done") done = total;
     const pct = Math.round(100 * done / total);
     $("progressBar").style.width = `${pct}%`;
     if(phase === "done") $("progressText").textContent = "Complete";
-    else if(phase === "postSurvey") $("progressText").textContent = "Final questions";
+    else if(phase === "postSurveyPurpose" || phase === "postSurveyComments" || phase === "postSurveyDemographics") $("progressText").textContent = "Final questions";
     else if(phase === "initial") $("progressText").textContent = `Block 1: ${initialIndex} of ${testTrials.length}`;
     else if(phase === "revision") $("progressText").textContent = `Block 2: ${revisionIndex} of ${testTrials.length}`;
     else if(phase === "transition") $("progressText").textContent = `Block 1 complete`;
@@ -1886,41 +1918,15 @@
         }
       }
 
-      // In Block 2, keep the same scale span as Block 1 whenever possible,
-      // but auto-pan the initial viewport so the initial and advisor markers
-      // are visible. Only expand the scale if the historical prices plus
-      // those markers cannot fit within the historical-only span.
+      // Block 2 intentionally keeps the same initial Y-axis scale as Block 1.
+      // Initial/advisor markers no longer expand the axis, because that would
+      // compress the historical zigzag and make the same stock look different.
+      // Instead, if a marker falls outside the visible range, it is drawn as an
+      // edge marker at the top/bottom of the plot, and the participant can drag
+      // the chart vertically to bring its exact value into view.
       if(isRevisionChart && markerValuesForInitialView.length){
-        const requiredValues = valuesThatMustBeVisible.concat(markerValuesForInitialView);
-        const reqMin = Math.min(...requiredValues);
-        const reqMax = Math.max(...requiredValues);
-        const baseSpan = yMax - yMin;
-        const markerPadding = Math.max(baseSpan * 0.04, yTickInterval * 0.35, 1);
-        const paddedReqMin = reqMin - markerPadding;
-        const paddedReqMax = reqMax + markerPadding;
-
-        if((paddedReqMax - paddedReqMin) <= baseSpan){
-          if(paddedReqMin < yMin){
-            yMin = paddedReqMin;
-            yMax = yMin + baseSpan;
-          }
-          if(paddedReqMax > yMax){
-            yMax = paddedReqMax;
-            yMin = yMax - baseSpan;
-          }
-        } else {
-          const combinedRange = Math.max(reqMax - reqMin, 1);
-          padding = Math.max(combinedRange * 0.10, 2);
-          yTickInterval = niceTickInterval(combinedRange + 2 * padding, 6);
-          yMin = yTickInterval * Math.floor((reqMin - padding) / yTickInterval);
-          yMax = yTickInterval * Math.ceil((reqMax + padding) / yTickInterval);
-          if(yMin === yMax){
-            yMin -= yTickInterval;
-            yMax += yTickInterval;
-          }
-        }
-        minRequired = Math.min(minRequired, reqMin);
-        maxRequired = Math.max(maxRequired, reqMax);
+        minRequired = Math.min(minRequired, ...markerValuesForInitialView);
+        maxRequired = Math.max(maxRequired, ...markerValuesForInitialView);
       }
 
       yViewState[stateKey] = {
@@ -1970,8 +1976,17 @@
     const markers = [];
     function marker(v, color, label, dy=0, shape="circle", xOffset=0, hollow=false){
       if(v === undefined || v === null || !Number.isFinite(Number(v))) return;
-      const xx = x(forecastPeriod) + xOffset, yy = y(Number(v));
-      if(yy < pad.t - 12 || yy > height - pad.b + 12) return;
+      const rawValue = Number(v);
+      const xx = x(forecastPeriod) + xOffset;
+      let yy = y(rawValue);
+      const plotTop = pad.t;
+      const plotBottom = height - pad.b;
+      const offTop = yy < plotTop - 12;
+      const offBottom = yy > plotBottom + 12;
+      const isEdgeMarker = offTop || offBottom;
+      if(isEdgeMarker){
+        yy = offTop ? plotTop + 14 : plotBottom - 14;
+      }
       const fillColor = hollow ? "#ffffff" : color;
       const strokeColor = hollow ? color : "#fff";
       const strokeWidth = hollow ? 3 : 2;
@@ -1981,7 +1996,37 @@
       } else {
         markers.push(`<circle cx="${xx}" cy="${yy}" r="7" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`);
       }
+      if(isEdgeMarker){
+        const arrow = offTop ? "↑" : "↓";
+        const textY = offTop ? yy + 28 : yy - 18;
+        const arrowY = offTop ? yy - 12 : yy + 22;
+        const valueText = `${rawValue.toFixed(2)} ${arrow}`;
+        markers.push(`<text x="${xx-12}" y="${textY}" text-anchor="end" font-size="12" font-weight="800" fill="${color}">${valueText}</text>`);
+        markers.push(`<text x="${xx}" y="${arrowY}" text-anchor="middle" font-size="16" font-weight="900" fill="${color}">${arrow}</text>`);
+      }
     }
+    const markerOutsideVisibleRange = v => {
+      if(v === undefined || v === null || !Number.isFinite(Number(v))) return false;
+      const yy = y(Number(v));
+      return yy < pad.t - 12 || yy > height - pad.b + 12;
+    };
+
+    const needsDragNotice = isRevisionChart && (
+      markerOutsideVisibleRange(opts.initialPoint) ||
+      markerOutsideVisibleRange(opts.advisorPoint) ||
+      markerOutsideVisibleRange(opts.finalPoint)
+    );
+    if(needsDragNotice){
+      const noticeText = "Drag chart ↑/↓ to see full forecasts";
+      const noticeX = Math.max(pad.l + 210, forecastX - 16);
+      const noticeY = pad.t + 24;
+      markers.push(`
+        <g class="dragNotice" pointer-events="none">
+          <rect x="${noticeX - 232}" y="${noticeY - 18}" width="224" height="27" rx="8" fill="#fff7ed" stroke="#f59e0b" stroke-width="1.2" opacity="0.96"/>
+          <text x="${noticeX - 120}" y="${noticeY}" text-anchor="middle" font-size="12" font-weight="850" fill="#92400e">${noticeText}</text>
+        </g>`);
+    }
+
     function interval(lo, hi, color){
       if(lo === undefined || hi === undefined || lo === null || hi === null) return;
       const xx = x(forecastPeriod);
@@ -1993,8 +2038,8 @@
     const hasAdvisorMarker = opts.advisorPoint !== undefined && opts.advisorPoint !== null && Number.isFinite(Number(opts.advisorPoint));
     const initialAdvisorTouch = hasInitialMarker && hasAdvisorMarker && Math.abs(y(Number(opts.initialPoint)) - y(Number(opts.advisorPoint))) <= 18;
     const conditionalOffset = initialAdvisorTouch ? 4 : 0;
-    marker(opts.initialPoint, "#2563eb", "Initial forecast", -18, "circle", -conditionalOffset, true);
-    marker(opts.advisorPoint, "#d946ef", "taylor101's forecast", 18, "diamond", conditionalOffset, true);
+    marker(opts.initialPoint, "#1d4ed8", "Initial forecast", -18, "circle", -conditionalOffset, true);
+    marker(opts.advisorPoint, "#c026d3", "taylor101's forecast", 18, "diamond", conditionalOffset, true);
     marker(opts.finalPoint, "#16a34a", "Final forecast", 34, "circle", 0, true);
     marker(opts.truth, "#059669", "Actual", 50, "circle", 0, false);
     svg.innerHTML = `
@@ -2303,7 +2348,7 @@
     if(adviceText) adviceText.textContent = "";
     const headline = document.getElementById("instaHeadline");
     const advisorPoint = init.advisor_point;
-    if(headline) headline.innerHTML = `My forecast for this stock is: <span class="forecastNum">${money(advisorPoint)}</span>`;
+    if(headline) headline.innerHTML = `My forecast for this stock is: <span class="forecastNum advisorEstimateValue">${money(advisorPoint)}</span>`;
     $("finalPoint").value = "";
 
     drawChart($("trialChart"), t, {
@@ -2375,11 +2420,40 @@
   }
 
   function renderPostSurvey(){
-    phase = "postSurvey";
+    phase = "postSurveyPurpose";
     updateProgress();
     const warn = $("postSurveyWarn");
     if(warn){ warn.textContent = ""; warn.classList.add("hidden"); }
-    show("screenPostSurvey");
+    show("screenPostSurveyPurpose");
+  }
+
+  function countLettersOnly(text){
+    const matches = String(text || "").match(/[A-Za-z]/g);
+    return matches ? matches.length : 0;
+  }
+
+  function submitPurposePage(){
+    const purposeText = ($("Survey_purpose")?.value || "").trim();
+    postSurvey.Survey_purpose = purposeText;
+    if(countLettersOnly(purposeText) < 10){
+      setWarn("purposeWarn", "Please type at least 10 letters before continuing.");
+      const purposeInput = $("Survey_purpose");
+      if(purposeInput) purposeInput.focus();
+      return;
+    }
+    setWarn("purposeWarn", "");
+    phase = "postSurveyComments";
+    updateProgress();
+    show("screenPostSurveyComments");
+  }
+
+  function submitCommentsPage(){
+    postSurvey.Comments = ($("Comments")?.value || "").trim();
+    phase = "postSurveyDemographics";
+    updateProgress();
+    const warn = $("postSurveyWarn");
+    if(warn){ warn.textContent = ""; warn.classList.add("hidden"); }
+    show("screenPostSurveyDemographics");
   }
 
   function getSelectedRadio(name){
@@ -2388,8 +2462,8 @@
   }
 
   function submitPostSurvey(){
-    postSurvey.Survey_purpose = ($("Survey_purpose")?.value || "").trim();
-    postSurvey.Comments = ($("Comments")?.value || "").trim();
+    postSurvey.Survey_purpose = ($("Survey_purpose")?.value || postSurvey.Survey_purpose || "").trim();
+    postSurvey.Comments = ($("Comments")?.value || postSurvey.Comments || "").trim();
     postSurvey.sex = getSelectedRadio("sex");
     postSurvey.age = ($("age")?.value || "").trim();
     postSurvey.edu = getSelectedRadio("edu");
@@ -2887,6 +2961,8 @@
   $("submitProfileCheckBtn").addEventListener("click", handleProfileCheck);
   $("submitInitialBtn").addEventListener("click", submitInitial);
   $("submitFinalBtn").addEventListener("click", submitFinal);
+  $("submitPurposeBtn").addEventListener("click", submitPurposePage);
+  $("submitCommentsBtn").addEventListener("click", submitCommentsPage);
   $("submitPostSurveyBtn").addEventListener("click", submitPostSurvey);
   $("trialChart").addEventListener("click", handleChartClick);
   $("trialChart").addEventListener("pointerdown", handleChartPointerDown);
